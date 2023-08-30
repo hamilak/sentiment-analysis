@@ -1,15 +1,13 @@
 import pandas as pd
 import numpy as np
-import re
-import string
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
+import matplotlib.pyplot as plt
+import seaborn as sns
 from textblob import TextBlob
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
+from clean_data import clean_text
 
 
 # Load csv data
@@ -21,63 +19,11 @@ print(df.info())
 print(df.describe())
 
 print(df["Sentence"].head(5))
-
-
-# Lower casing text
-def lowercase_text(text):
-    return text.lower()
-
-
-# Removing symbols
-def remove_sym(text):
-    return re.sub(r'[^\w\s]|[$]', '', text)
-
-
-# Removing numbers
-def remove_nums(text):
-    return re.sub(r'\d+', '', text)
-
-
-# Remove whitespace
-def remove_whitespace(text):
-    return re.sub(r'\s+', '', text).strip()
-
-
-# Remove stopwords
-# nltk.download('stopwords')
-stop_words = set(stopwords.words('english'))
-
-
-def remove_stopwords(text):
-    words = text.split()
-    filtered_words = [word for word in words if word.lower() not in stop_words]
-    return ' '.join(filtered_words)
-
-
-# Lemmatization
-# nltk.download('wordnet')
-lemmatizer = WordNetLemmatizer()
-
-
-def lemmatize_text(text):
-    words = text.split()
-    lemmatized_words = [lemmatizer.lemmatize(word) for word in words]
-    return ' '.join(lemmatized_words)
-
-
-# Clean the text data
-def clean_text(text):
-    text = lowercase_text(text)
-    text = remove_sym(text)
-    text = remove_stopwords(text)
-    text = remove_whitespace(text)
-    text = remove_nums(text)
-    text = lemmatize_text(text)
-    return text
+print(df.groupby('Sentiment').count())
 
 
 df["Sentence"] = df["Sentence"].apply(clean_text)
-print(df["Sentence"])
+# print(df["Sentence"])
 
 
 # Calculate sentiment using textblob
@@ -96,7 +42,9 @@ def analyze_sentiment(text):
 df["Predicted Sentiment"] = df["Sentence"].apply(analyze_sentiment)
 # print(df)
 accuracy_tb = accuracy_score(df["Sentiment"], df["Predicted Sentiment"])
-print(f"TB accuracy is{accuracy_tb}")
+print("TB accuracy is", accuracy_tb)
+print(df.groupby('Predicted Sentiment').count())
+
 
 # Split the data train and test sets
 X = df["Sentence"]
@@ -110,12 +58,21 @@ X_train_tfidf = vectorizer.fit_transform(X_train)
 X_test_tfidf = vectorizer.transform(X_test)
 
 
-# Initialize and SVM classifier
+# Initialize and train SVM classifier
 classifier = SVC()
 classifier.fit(X_train_tfidf, y_train)
 
 y_pred = classifier.predict(X_test_tfidf)
+# print(y_pred)
 
 accuracy = accuracy_score(y_test, y_pred)
-print(f"Accuracy is {accuracy}")
+print("Accuracy is", accuracy)
+
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(8, 6))
+ax = sns.heatmap(cm, annot=True, cmap="Blues", fmt="g", cbar=False)
+# plt.xlabel('Predicted')
+# plt.ylabel('Actual')
+# plt.title('Confusion matrix')
+# plt.show()
 
